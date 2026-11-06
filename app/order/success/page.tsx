@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import { CircleCheck, ArrowUpRight } from 'lucide-react';
+export const metadata = { title: 'Order Received' };
+export default async function Success({searchParams}:{searchParams:Promise<{number?:string}>}){const {number}=await searchParams;return <main className="container page-section"><div className="confirmation"><CircleCheck size={52} strokeWidth={1.3}/><span className="eyebrow">THANK YOU FOR YOUR ORDER</span><h1>Your journey <em>starts here.</em></h1><p>We’ve received your order. Our team will be in touch to confirm delivery details.</p>{number&&<div className="order-number">Reference: <strong>{number.replace(/[^A-Z0-9-]/g,'').slice(0,32)}</strong></div>}<Link className="btn btn-primary" href="/shop">Continue exploring <ArrowUpRight size={17}/></Link></div></main>}

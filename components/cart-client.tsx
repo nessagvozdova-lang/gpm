@@ -1,0 +1,17 @@
+'use client';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Trash2, ArrowUpRight } from 'lucide-react';
+import { formatMoney, SHIPPING_THRESHOLD } from '@/lib/format';
+import { QuantityControl } from '@/components/store-actions';
+type Cart = {items:{id:string;slug:string;name:string;image:string;color:string;size:string;price:number;quantity:number;lineTotal:number;stock:number}[];subtotal:number;shipping:number;total:number;count:number};
+export function CartClient({checkout=false}:{checkout?:boolean}){
+  const [cart,setCart]=useState<Cart|null>(null); const [error,setError]=useState(''); const [busy,setBusy]=useState('');
+  async function refresh(){try{const res=await fetch('/api/cart',{cache:'no-store'});setCart(await res.json());}catch{setError('Unable to load your bag.');}}
+  useEffect(()=>{void refresh()},[]);
+  async function update(id:string,quantity:number){setBusy(id);setError('');try{const res=await fetch(`/api/cart/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantity})});const data=await res.json();if(!res.ok)throw Error(data.error);setCart(data);window.dispatchEvent(new Event('cart:updated'));}catch(e){setError(e instanceof Error?e.message:'Could not update your bag.')}finally{setBusy('')}}
+  if(!cart)return <div className="empty-state">Loading your carefully chosen pieces…</div>;
+  if(!cart.items.length)return <div className="empty-state"><h2>Your bag is waiting.</h2><p>Something lovely is just around the corner. Let’s find your next favorite piece.</p><Link href="/shop" className="btn btn-primary">Explore the collection <ArrowUpRight size={17}/></Link></div>;
+  return <div className={'cart-layout '+(checkout?'cart-checkout':'')}><div className="cart-items">{cart.items.map(item=><article key={item.id} className="cart-line"><Link href={`/shop/${item.slug}`} className="cart-line-image"><Image src={item.image || '/placeholder.svg'} width={160} height={180} alt={item.name}/></Link><div className="cart-line-copy"><Link href={`/shop/${item.slug}`}><h3>{item.name}</h3></Link><span>{item.color} / {item.size}</span><strong>{formatMoney(item.price)}</strong><div className="cart-line-control"><QuantityControl quantity={item.quantity} max={Math.min(20,item.stock)} onChange={n=>update(item.id,n)}/><button className="remove" onClick={()=>update(item.id,0)} disabled={busy===item.id} aria-label={`Remove ${item.name}`}><Trash2 size={16}/></button></div></div><strong className="cart-line-total">{formatMoney(item.lineTotal)}</strong></article>)}{error&&<p role="alert" className="form-error">{error}</p>}</div><aside className="cart-summary"><span className="eyebrow">YOUR ORDER</span><h2>Order summary</h2><div className="summary-line"><span>Subtotal ({cart.count} items)</span><strong>{formatMoney(cart.subtotal)}</strong></div><div className="summary-line"><span>Shipping</span><strong>{cart.shipping===0?'Complimentary':formatMoney(cart.shipping)}</strong></div><div className="summary-total"><span>Total</span><strong>{formatMoney(cart.total)}</strong></div>{cart.subtotal<SHIPPING_THRESHOLD&&<p className="shipping-hint">Add {formatMoney(SHIPPING_THRESHOLD-cart.subtotal)} more for complimentary delivery.</p>}{!checkout&&<Link href="/checkout" className="btn btn-primary full-width">Continue to checkout <ArrowUpRight size={17}/></Link>}<p className="summary-security">Secure checkout · Cash on delivery</p></aside></div>;
+}

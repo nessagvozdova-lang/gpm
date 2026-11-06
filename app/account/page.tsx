@@ -1,0 +1,10 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { Package, Heart, UserCircle, ArrowUpRight } from 'lucide-react';
+import { getUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { formatMoney } from '@/lib/format';
+import { Logout } from '@/components/logout';
+export const dynamic='force-dynamic';
+export const metadata = { title: 'My Account' };
+export default async function Account(){const user=await getUser();if(!user)redirect('/login?next=/account');const [orders,saved]=await Promise.all([prisma.order.findMany({where:{userId:user.id},include:{items:true},orderBy:{createdAt:'desc'},take:20}),prisma.wishlistItem.count({where:{userId:user.id}})]);return <main className="container page-section"><div className="section-title-row"><div><span className="eyebrow">YOUR PERSONAL SPACE</span><h1 className="page-title">Hello, <em>{user.name.split(' ')[0]}.</em></h1></div><Logout/></div><div className="account-stats"><div><UserCircle/><span>Account</span><strong>{user.email}</strong></div><div><Package/><span>Your orders</span><strong>{orders.length}</strong></div><div><Heart/><span>Saved favorites</span><strong>{saved}</strong><Link href="/wishlist">View wishlist ↗</Link></div></div><div className="section-title-row account-orders-title"><div><span className="eyebrow">A HISTORY OF GOOD CHOICES</span><h2>Your <em>orders.</em></h2></div>{user.role==='ADMIN'&&<Link href="/admin" className="text-link">Admin dashboard <ArrowUpRight size={16}/></Link>}</div>{orders.length?orders.map(o=><article className="account-order" key={o.id}><div><strong>{o.number}</strong><span>{o.createdAt.toLocaleDateString('en-GB')} · {o.items.length} item types</span></div><span className="pill">{o.status.toLowerCase()}</span><strong>{formatMoney(o.total)}</strong></article>):<div className="empty-state"><h3>No journeys on record yet.</h3><p>Your future favorites are waiting for you.</p><Link href="/shop" className="btn btn-primary">Explore the collection</Link></div>}</main>}
